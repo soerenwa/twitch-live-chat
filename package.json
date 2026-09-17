@@ -1,0 +1,27 @@
+{
+  "name": "twitch-live-chat",
+  "version": "1.0.0",
+  "description": "Anonymous, read-only live Twitch chat extractor — zero-dependency Node CLI, standalone multi-stream browser GUI, and a Dockerized hosted service. No OAuth/token/client-ID required.",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "twitch-chat": "twitch-chat.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "cli": "node twitch-chat.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "server.js",
+    "twitch-chat.js",
+    "twitch-chat.html"
+  ],
+  "keywords": ["twitch", "chat", "irc", "tmi", "sse", "livestream", "anonymous"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/soerenwa/twitch-live-chat.git"
+  }
+}

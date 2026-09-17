@@ -1,0 +1,14 @@
+services:
+  twitch-live-chat:
+    build: .
+    # Or pull a prebuilt image instead of building:
+    # image: ghcr.io/soerenwa/twitch-live-chat:latest
+    container_name: twitch-live-chat
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      BUFFER_SIZE: 200      # messages kept per channel for ?history / capacity
+      MAX_CHANNELS: 50      # max distinct channels joined at once
+      IDLE_MS: 60000        # leave a channel this long after its last subscriber
+    restart: unless-stopped

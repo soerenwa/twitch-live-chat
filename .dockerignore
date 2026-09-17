@@ -1,0 +1,10 @@
+.git
+.gitignore
+node_modules
+*.log
+twitch-*.txt
+twitch-*.json
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore
