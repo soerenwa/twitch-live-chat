@@ -1,0 +1,783 @@
+<title>Twitch Live Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+/>
+<style>
+  :root {
+    --bg: #f4f3f7;
+    --panel: #ffffff;
+    --panel-2: #f7f6fb;
+    --row-alt: #faf9fd;
+    --border: #e4e1ee;
+    --text: #1b1730;
+    --muted: #6b6685;
+    --faint: #9a95b0;
+    --accent: #772ce8;
+    --accent-ink: #ffffff;
+    --ok: #1a9e63;
+    --warn: #c07d0a;
+    --err: #d23a4b;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+    --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --shadow: 0 1px 2px rgba(27, 23, 48, 0.06), 0 8px 24px rgba(27, 23, 48, 0.05);
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: #0d0b14;
+      --panel: #17141f;
+      --panel-2: #1d1a27;
+      --row-alt: #17141f;
+      --border: #2a2536;
+      --text: #ece9f5;
+      --muted: #a49fba;
+      --faint: #6f6a86;
+      --accent: #a970ff;
+      --accent-ink: #12101a;
+      --ok: #3ddc97;
+      --warn: #f5c451;
+      --err: #ff6b7d;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0b14;
+    --panel: #17141f;
+    --panel-2: #1d1a27;
+    --row-alt: #17141f;
+    --border: #2a2536;
+    --text: #ece9f5;
+    --muted: #a49fba;
+    --faint: #6f6a86;
+    --accent: #a970ff;
+    --accent-ink: #12101a;
+    --ok: #3ddc97;
+    --warn: #f5c451;
+    --err: #ff6b7d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--ui);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  /* ---- header ---- */
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    padding-block: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .brand svg { width: 20px; height: 20px; display: block; color: var(--accent); }
+
+  form.conn {
+    display: flex;
+    flex: 1 1 300px;
+    min-width: 0;
+    gap: 8px;
+    align-items: center;
+  }
+  .field { position: relative; flex: 1 1 auto; min-width: 0; }
+  .field .hash {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--faint); font-family: var(--mono); pointer-events: none;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 9px 12px 9px 26px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    font: 500 14px var(--ui);
+  }
+  input[type="text"]::placeholder { color: var(--faint); }
+  input:focus-visible, button:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button {
+    font: 600 13px var(--ui);
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    padding: 9px 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s;
+  }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.primary:hover { filter: brightness(1.06); }
+  button.ghost.on { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); border-color: var(--accent); color: var(--accent); }
+
+  .status {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12.5px; font-weight: 600; color: var(--muted);
+    padding: 6px 11px; border: 1px solid var(--border);
+    border-radius: 999px; background: var(--panel); white-space: nowrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+  .status[data-s="live"] .dot { background: var(--ok); animation: pulse 1.8s infinite; }
+  .status[data-s="connecting"] .dot { background: var(--warn); animation: pulse 1s infinite; }
+  .status[data-s="error"] .dot { background: var(--err); }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); }
+    70% { box-shadow: 0 0 0 7px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  @media (prefers-reduced-motion: reduce) { .dot { animation: none !important; } }
+
+  /* ---- multi-stream panel ---- */
+  .panel {
+    border-bottom: 1px solid var(--border);
+    padding-block: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .panel .lead { font-size: 12.5px; color: var(--muted); }
+  .panel textarea {
+    width: 100%;
+    min-height: 74px;
+    resize: vertical;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    font: 500 13px var(--mono);
+    line-height: 1.6;
+  }
+  .panel textarea::placeholder { color: var(--faint); font-family: var(--ui); }
+  .panel .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  /* ---- active stream chips ---- */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips:empty { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 6px 5px 11px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    font-size: 12.5px;
+    box-shadow: var(--shadow);
+  }
+  .chip .dot { background: var(--faint); }
+  .chips.live .chip .dot { background: var(--ok); }
+  .chip .cname { font-weight: 700; }
+  .chip .ccount {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    color: var(--muted); font-size: 11.5px;
+    padding: 1px 6px; border-radius: 999px; background: var(--panel-2);
+  }
+  .iconbtn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; padding: 0;
+    border-radius: 999px; border: 1px solid transparent;
+    background: transparent; color: var(--muted); font-size: 13px; line-height: 1;
+  }
+  .iconbtn:hover { background: var(--panel-2); border-color: var(--border); color: var(--text); }
+
+  /* ---- toolbar ---- */
+  .toolbar {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px 14px; padding-block: 10px;
+    border-bottom: 1px solid var(--border); font-size: 12.5px;
+  }
+  .stat { display: inline-flex; align-items: baseline; gap: 5px; color: var(--muted); }
+  .stat b {
+    font-family: var(--mono); font-weight: 600; color: var(--text);
+    font-variant-numeric: tabular-nums; font-size: 13px;
+  }
+  .spacer { flex: 1 1 auto; }
+  .filter {
+    padding: 6px 10px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    font: 500 12.5px var(--ui); width: 150px; max-width: 40vw;
+  }
+  .tbtn { padding: 6px 10px; font-size: 12.5px; border-radius: 8px; }
+  .tbtn.on {
+    background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+    border-color: var(--accent); color: var(--accent);
+  }
+
+  /* ---- chat ---- */
+  .chat {
+    flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;
+    padding-block: 8px; scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .chat::-webkit-scrollbar { width: 10px; }
+  .chat::-webkit-scrollbar-thumb {
+    background: var(--border); border-radius: 10px; border: 3px solid var(--bg);
+  }
+  .msg {
+    display: flex; gap: 8px; align-items: baseline;
+    padding: 3px 8px; border-radius: 6px;
+    word-break: break-word; overflow-wrap: anywhere;
+  }
+  .msg:nth-child(even) { background: var(--row-alt); }
+  .msg .t {
+    flex: 0 0 auto; font-family: var(--mono); font-size: 11.5px;
+    color: var(--faint); font-variant-numeric: tabular-nums;
+  }
+  .msg .chtag {
+    flex: 0 0 auto; font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 0 6px; border-radius: 5px;
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+  .msg .body { flex: 1 1 auto; min-width: 0; }
+  .msg .name { font-weight: 700; }
+  .msg .name::after { content: ":"; color: var(--faint); font-weight: 400; }
+  .msg.action .name::after { content: ""; }
+  .msg.action .text { font-style: italic; color: var(--muted); }
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700; line-height: 1;
+    padding: 2px 5px; border-radius: 4px; margin-right: 5px; vertical-align: 1px;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .b-broadcaster { background: #e91916; color: #fff; }
+  .b-moderator { background: #1a9e63; color: #fff; }
+  .b-vip { background: #e005b9; color: #fff; }
+  .b-subscriber { background: color-mix(in srgb, var(--accent) 85%, #000); color: #fff; }
+  .b-staff, .b-admin, .b-global_mod { background: #6441a5; color: #fff; }
+
+  /* ---- empty / hint ---- */
+  .hint {
+    margin: auto; max-width: 460px; text-align: center;
+    color: var(--muted); padding: 40px 16px;
+  }
+  .hint h2 { color: var(--text); font-size: 17px; margin: 0 0 6px; font-weight: 700; }
+  .hint p { margin: 6px 0; font-size: 13px; }
+  .hint code {
+    font-family: var(--mono); background: var(--panel-2);
+    border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; font-size: 12px;
+  }
+  .footnote {
+    padding: 8px 2px; border-top: 1px solid var(--border);
+    color: var(--faint); font-size: 11.5px; text-align: center;
+  }
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M4.3 2 3 5.6v13.1h4.5V22h2.5l3.2-3.3H17l5-5V2H4.3zm15.2 10.4-2.9 2.9h-4.5l-2.5 2.5v-2.5H5.9V3.9h13.6v8.5zM16.5 6.9V12h-1.8V6.9h1.8zm-4.6 0V12h-1.8V6.9h1.8z"/>
+      </svg>
+      Twitch Live Chat
+    </div>
+
+    <form class="conn" id="connForm" autocomplete="off">
+      <div class="field">
+        <span class="hash">#</span>
+        <input id="channel" type="text" placeholder="add a channel or twitch.tv link" spellcheck="false" />
+      </div>
+      <button class="primary" id="addBtn" type="submit">Add</button>
+    </form>
+
+    <button class="ghost" id="multiBtn" type="button" title="Add several streams at once">Streams</button>
+    <button id="disconnectBtn" type="button" hidden>Disconnect</button>
+    <span class="status" id="status" data-s="idle"><span class="dot"></span><span id="statusText">Idle</span></span>
+  </header>
+
+  <section class="panel" id="multiPanel" hidden>
+    <div class="lead">Paste multiple channels or links — one per line, or separated by spaces/commas. All are recorded at once.</div>
+    <textarea id="multiInput" placeholder="zackrawrr&#10;https://twitch.tv/xqc&#10;pokimane, caedrel"></textarea>
+    <div class="actions">
+      <button class="primary" id="addAllBtn" type="button">Add all &amp; record</button>
+      <button id="disconnectAll2" type="button">Disconnect all</button>
+      <span class="spacer"></span>
+      <span class="lead">Each stream below has its own <b>⬇ export</b>.</span>
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <div class="toolbar">
+    <span class="stat">msgs <b id="count">0</b></span>
+    <span class="stat"><b id="rate">0</b> /min</span>
+    <span class="stat">chatters <b id="chatters">0</b></span>
+    <span class="stat">streams <b id="streamCount">0</b></span>
+    <span class="spacer"></span>
+    <input class="filter" id="filter" type="text" placeholder="filter…" spellcheck="false" />
+    <button class="tbtn on" id="autoscrollBtn" type="button" title="Keep scrolling to newest">Autoscroll</button>
+    <button class="tbtn" id="clearBtn" type="button">Clear</button>
+    <button class="tbtn" id="txtBtn" type="button" title="Export all streams, combined">All .txt</button>
+    <button class="tbtn" id="jsonBtn" type="button" title="Export all streams, combined">All .json</button>
+    <button class="tbtn" id="themeBtn" type="button" title="Toggle theme">◐</button>
+  </div>
+
+  <div class="chat" id="chat">
+    <div class="hint" id="hint">
+      <h2>Add one or more channels to start recording</h2>
+      <p>Quick-add a single channel above, or hit <b>Streams</b> to paste a whole list.</p>
+      <p>Names like <code>zackrawrr</code> or links like <code>https://twitch.tv/xqc</code> both work.</p>
+      <p>Read-only and anonymous — no login, no token.</p>
+    </div>
+  </div>
+
+  <div class="footnote">
+    Anonymous, read-only. Reads Twitch's public chat gateway — the same feed overlays use. No account, no token.
+  </div>
+</div>
+
+<script>
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const chat = $("chat"), hint = $("hint");
+  const statusEl = $("status"), statusText = $("statusText");
+  const countEl = $("count"), rateEl = $("rate"), chattersEl = $("chatters"), streamCountEl = $("streamCount");
+  const chipsEl = $("chips"), filterInput = $("filter");
+  const disconnectBtn = $("disconnectBtn"), multiBtn = $("multiBtn"), multiPanel = $("multiPanel");
+
+  // ---- state ----
+  const state = {
+    ws: null,
+    manualClose: false,
+    reconnectDelay: 1000,
+    channels: new Set(),      // active channel logins (lowercase)
+    stats: new Map(),         // channel -> { count, chatters:Set }
+  };
+  const log = [];             // every message, each tagged with .channel
+  const MAX_LOG = 20000;      // cap total in memory
+  const MAX_DOM = 500;        // cap rendered rows
+  const times = [];           // global timestamps for msgs/min
+  const globalChatters = new Set();
+  let totalCount = 0;
+  let multiMode = false;      // show per-message channel tag once >1 stream seen
+  let filterText = "";
+
+  // ---- theme (per-viewer convenience) ----
+  try {
+    const saved = localStorage.getItem("tlc-theme");
+    if (saved) document.documentElement.setAttribute("data-theme", saved);
+  } catch {}
+  $("themeBtn").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    const isDark = cur === "dark" || (!cur && matchMedia("(prefers-color-scheme: dark)").matches);
+    const next = isDark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("tlc-theme", next); } catch {}
+  });
+
+  // restore last channel list into the multi box (no auto-connect)
+  try {
+    const last = localStorage.getItem("tlc-channels");
+    if (last) $("multiInput").value = JSON.parse(last).join("\n");
+  } catch {}
+  function saveList() {
+    try { localStorage.setItem("tlc-channels", JSON.stringify([...state.channels])); } catch {}
+  }
+
+  // ---- parsing ----
+  function parseChannel(input) {
+    let s = String(input || "").trim();
+    const m = s.match(/twitch\.tv\/([^/?#]+)/i);
+    if (m) s = m[1];
+    return s.replace(/^#/, "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+  }
+  function parseList(str) {
+    return [...new Set(String(str || "").split(/[\s,]+/).map(parseChannel).filter(Boolean))];
+  }
+
+  function unescapeTag(v) {
+    return String(v).replace(/\\s/g, " ").replace(/\\:/g, ";")
+      .replace(/\\r/g, "\r").replace(/\\n/g, "\n").replace(/\\\\/g, "\\");
+  }
+  function parseLine(line) {
+    const msg = { tags: {}, prefix: null, command: null, params: [] };
+    let rest = line;
+    if (rest[0] === "@") {
+      const sp = rest.indexOf(" ");
+      rest.slice(1, sp).split(";").forEach((pair) => {
+        const eq = pair.indexOf("=");
+        if (eq === -1) msg.tags[pair] = true;
+        else msg.tags[pair.slice(0, eq)] = unescapeTag(pair.slice(eq + 1));
+      });
+      rest = rest.slice(sp + 1);
+    }
+    if (rest[0] === ":") {
+      const sp = rest.indexOf(" ");
+      msg.prefix = rest.slice(1, sp);
+      rest = rest.slice(sp + 1);
+    }
+    const tAt = rest.indexOf(" :");
+    let trailing = null;
+    if (tAt !== -1) { trailing = rest.slice(tAt + 2); rest = rest.slice(0, tAt); }
+    const parts = rest.split(" ").filter(Boolean);
+    msg.command = parts.shift();
+    msg.params = parts;
+    if (trailing !== null) msg.params.push(trailing);
+    return msg;
+  }
+
+  const nickOf = (p) => (!p ? "" : p.indexOf("!") === -1 ? p : p.slice(0, p.indexOf("!")));
+  const two = (n) => String(n).padStart(2, "0");
+  const stamp = (d) => `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
+
+  function readableColor(hex, name) {
+    let rgb = null;
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || "");
+    if (m) rgb = [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+    if (!rgb) {
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+      return `hsl(${h % 360} 68% 62%)`;
+    }
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark" ||
+      (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    const lum = 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+    if (isDark && lum < 90) {
+      const f = 90 / Math.max(lum, 1);
+      rgb = rgb.map((c) => Math.min(255, Math.round(c * f)));
+    }
+    return `rgb(${rgb[0]} ${rgb[1]} ${rgb[2]})`;
+  }
+  // stable per-channel color for the message tag + chip
+  function chanColor(ch) {
+    let h = 0;
+    for (let i = 0; i < ch.length; i++) h = (h * 31 + ch.charCodeAt(i)) >>> 0;
+    return `hsl(${h % 360} 60% 52%)`;
+  }
+  function badgesOf(tagStr) {
+    if (!tagStr) return [];
+    return tagStr.split(",").map((b) => b.split("/")[0])
+      .filter((b) => ["broadcaster", "moderator", "vip", "subscriber", "staff", "admin", "global_mod"].includes(b));
+  }
+
+  // ---- status / header ----
+  function setStatus(stateName, text) {
+    statusEl.setAttribute("data-s", stateName);
+    statusText.textContent = text;
+  }
+  function isLive() { return state.ws && state.ws.readyState === 1; }
+  function updateHeader() {
+    const n = state.channels.size;
+    multiBtn.textContent = "Streams" + (n ? " · " + n : "");
+    streamCountEl.textContent = String(n);
+    disconnectBtn.hidden = n === 0;
+    chipsEl.classList.toggle("live", isLive());
+    if (isLive() && n > 0) {
+      setStatus("live", n === 1 ? "Live · #" + [...state.channels][0] : "Live · " + n + " streams");
+    } else if (n === 0) {
+      setStatus("idle", "Idle");
+      disconnectBtn.textContent = "Disconnect";
+    }
+  }
+
+  // ---- chips ----
+  function renderChip(ch) {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.dataset.ch = ch;
+    chip.innerHTML =
+      '<span class="dot"></span>' +
+      '<span class="cname" style="color:' + chanColor(ch) + '">#' + ch + "</span>" +
+      '<span class="ccount">0</span>' +
+      '<button class="iconbtn" data-act="export" title="Export #' + ch + '">⬇</button>' +
+      '<button class="iconbtn" data-act="remove" title="Stop &amp; remove #' + ch + '">✕</button>';
+    chipsEl.appendChild(chip);
+  }
+  function removeChip(ch) {
+    const el = chipsEl.querySelector('.chip[data-ch="' + CSS.escape(ch) + '"]');
+    if (el) el.remove();
+  }
+  function updateChipCount(ch) {
+    const st = state.stats.get(ch);
+    const el = chipsEl.querySelector('.chip[data-ch="' + CSS.escape(ch) + '"] .ccount');
+    if (el && st) el.textContent = String(st.count);
+  }
+  chipsEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const chip = e.target.closest(".chip");
+    const ch = chip && chip.dataset.ch;
+    if (!ch) return;
+    if (btn.dataset.act === "export") exportChannel(ch);
+    else if (btn.dataset.act === "remove") removeChannel(ch);
+  });
+
+  // ---- connection ----
+  function openSocket() {
+    state.manualClose = false;
+    if (state.ws && (state.ws.readyState === 0 || state.ws.readyState === 1)) return;
+    setStatus("connecting", "Connecting…");
+    disconnectBtn.textContent = "Disconnect";
+    try {
+      state.ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+    } catch {
+      setStatus("error", "WebSocket blocked");
+      return;
+    }
+    state.ws.onopen = () => {
+      const nick = "justinfan" + Math.floor(Math.random() * 90000 + 10000);
+      state.ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands");
+      state.ws.send("NICK " + nick);
+      for (const ch of state.channels) state.ws.send("JOIN #" + ch);
+      updateHeader();
+    };
+    state.ws.onmessage = (ev) => ev.data.split("\r\n").forEach(handleLine);
+    state.ws.onerror = () => setStatus("error", "Connection error");
+    state.ws.onclose = () => {
+      if (state.manualClose || state.channels.size === 0) { updateHeader(); return; }
+      setStatus("connecting", "Reconnecting…");
+      setTimeout(openSocket, state.reconnectDelay);
+      state.reconnectDelay = Math.min(state.reconnectDelay * 2, 20000);
+    };
+  }
+
+  function addChannels(list) {
+    let added = 0;
+    for (const ch of list) {
+      if (!ch || state.channels.has(ch)) continue;
+      state.channels.add(ch);
+      state.stats.set(ch, { count: 0, chatters: new Set() });
+      renderChip(ch);
+      if (isLive()) state.ws.send("JOIN #" + ch);
+      added++;
+    }
+    if (state.channels.size > 1) multiMode = true;
+    if (added) { openSocket(); updateHeader(); saveList(); }
+  }
+
+  function removeChannel(ch) {
+    if (!state.channels.has(ch)) return;
+    if (isLive()) state.ws.send("PART #" + ch);
+    state.channels.delete(ch);
+    state.stats.delete(ch);
+    removeChip(ch);
+    saveList();
+    if (state.channels.size === 0) disconnectAll();
+    else updateHeader();
+  }
+
+  function disconnectAll() {
+    state.manualClose = true;
+    if (state.ws) { try { state.ws.close(); } catch {} state.ws = null; }
+    updateHeader();
+    setStatus("idle", state.channels.size ? "Disconnected" : "Idle");
+    disconnectBtn.textContent = "Reconnect";
+  }
+
+  // ---- message handling ----
+  function handleLine(line) {
+    if (!line) return;
+    const msg = parseLine(line);
+    switch (msg.command) {
+      case "PING":
+        state.ws && state.ws.send("PONG :" + (msg.params[0] || "tmi.twitch.tv"));
+        return;
+      case "001":
+        state.reconnectDelay = 1000;
+        updateHeader();
+        return;
+      case "JOIN":
+        if (nickOf(msg.prefix).startsWith("justinfan")) updateHeader();
+        return;
+      case "PRIVMSG": {
+        const chan = (msg.params[0] || "").replace(/^#/, "");
+        let textRaw = msg.params[msg.params.length - 1] || "";
+        let action = false;
+        const am = /^ACTION (.*)$/.exec(textRaw);
+        if (am) { action = true; textRaw = am[1]; }
+        const rec = {
+          channel: chan,
+          time: stamp(new Date()),
+          iso: new Date().toISOString(),
+          user: msg.tags["display-name"] || nickOf(msg.prefix),
+          login: nickOf(msg.prefix),
+          color: msg.tags.color || "",
+          badges: badgesOf(msg.tags.badges),
+          message: textRaw,
+          action,
+        };
+        totalCount++;
+        const st = state.stats.get(chan);
+        if (st) { st.count++; st.chatters.add(rec.login); updateChipCount(chan); }
+        globalChatters.add(rec.login);
+        addMessage(rec);
+        return;
+      }
+      default:
+        return;
+    }
+  }
+
+  function matchesFilter(rec) {
+    if (!filterText) return true;
+    return ("#" + rec.channel + " " + rec.user + " " + rec.message).toLowerCase().includes(filterText);
+  }
+  function makeRow(rec) {
+    const row = document.createElement("div");
+    row.className = "msg" + (rec.action ? " action" : "");
+    row.dataset.hay = ("#" + rec.channel + " " + rec.user + " " + rec.message).toLowerCase();
+
+    const t = document.createElement("span");
+    t.className = "t";
+    t.textContent = rec.time;
+    row.appendChild(t);
+
+    if (multiMode) {
+      const tag = document.createElement("span");
+      tag.className = "chtag";
+      tag.style.color = chanColor(rec.channel);
+      tag.textContent = "#" + rec.channel;
+      row.appendChild(tag);
+    }
+
+    const body = document.createElement("span");
+    body.className = "body";
+    for (const b of rec.badges) {
+      const el = document.createElement("span");
+      el.className = "badge b-" + b;
+      el.textContent = b === "broadcaster" ? "host" : b === "moderator" ? "mod" : b === "subscriber" ? "sub" : b;
+      body.appendChild(el);
+    }
+    const name = document.createElement("span");
+    name.className = "name";
+    name.style.color = readableColor(rec.color, rec.user);
+    name.textContent = rec.user;
+    body.appendChild(name);
+    body.appendChild(document.createTextNode(" "));
+    const text = document.createElement("span");
+    text.className = "text";
+    text.textContent = rec.message;
+    body.appendChild(text);
+    row.appendChild(body);
+
+    if (!matchesFilter(rec)) row.hidden = true;
+    return row;
+  }
+
+  function addMessage(rec) {
+    log.push(rec);
+    if (log.length > MAX_LOG) log.shift();
+    const now = Date.now();
+    times.push(now);
+    while (times.length && times[0] < now - 60000) times.shift();
+
+    if (hint.parentNode) hint.remove();
+    chat.appendChild(makeRow(rec));
+    while (chat.children.length > MAX_DOM) chat.removeChild(chat.firstChild);
+
+    countEl.textContent = String(totalCount);
+    rateEl.textContent = String(times.length);
+    chattersEl.textContent = String(globalChatters.size);
+    if (autoscroll) chat.scrollTop = chat.scrollHeight;
+  }
+
+  // ---- toolbar ----
+  let autoscroll = true;
+  chat.addEventListener("scroll", () => {
+    const nearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 40;
+    if (!nearBottom && autoscroll) toggleAutoscroll(false);
+  });
+  function toggleAutoscroll(force) {
+    autoscroll = typeof force === "boolean" ? force : !autoscroll;
+    $("autoscrollBtn").classList.toggle("on", autoscroll);
+    if (autoscroll) chat.scrollTop = chat.scrollHeight;
+  }
+  $("autoscrollBtn").addEventListener("click", () => toggleAutoscroll());
+
+  $("clearBtn").addEventListener("click", () => {
+    log.length = 0; times.length = 0; globalChatters.clear(); totalCount = 0;
+    for (const st of state.stats.values()) { st.count = 0; st.chatters.clear(); }
+    for (const ch of state.channels) updateChipCount(ch);
+    chat.innerHTML = "";
+    countEl.textContent = "0"; rateEl.textContent = "0"; chattersEl.textContent = "0";
+  });
+
+  filterInput.addEventListener("input", () => {
+    filterText = filterInput.value.trim().toLowerCase();
+    for (const row of chat.children) {
+      if (row.dataset.hay === undefined) continue;
+      row.hidden = !!filterText && !row.dataset.hay.includes(filterText);
+    }
+  });
+
+  // ---- export ----
+  function download(name, text, type) {
+    const blob = new Blob([text], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const ts = () => new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  function toTxt(rows, withChannel) {
+    return rows.map((r) => (withChannel ? "[" + r.channel + "] " : "") + r.time + " " + r.user + ": " + r.message).join("\n");
+  }
+  function exportChannel(ch) {
+    const rows = log.filter((r) => r.channel === ch);
+    if (!rows.length) { setStatus(isLive() ? "live" : "idle", "Nothing recorded yet for #" + ch); return; }
+    download("twitch-" + ch + "-" + ts() + ".json", JSON.stringify(rows, null, 2), "application/json");
+  }
+  $("txtBtn").addEventListener("click", () => {
+    if (!log.length) return;
+    const multi = new Set(log.map((r) => r.channel)).size > 1;
+    download("twitch-all-" + ts() + ".txt", toTxt(log, multi), "text/plain");
+  });
+  $("jsonBtn").addEventListener("click", () => {
+    if (!log.length) return;
+    download("twitch-all-" + ts() + ".json", JSON.stringify(log, null, 2), "application/json");
+  });
+
+  // ---- inputs ----
+  $("connForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const list = parseList($("channel").value);
+    if (list.length) { addChannels(list); $("channel").value = ""; }
+  });
+  multiBtn.addEventListener("click", () => {
+    multiPanel.hidden = !multiPanel.hidden;
+    if (!multiPanel.hidden) $("multiInput").focus();
+  });
+  $("addAllBtn").addEventListener("click", () => {
+    const list = parseList($("multiInput").value);
+    if (list.length) addChannels(list);
+  });
+  disconnectBtn.addEventListener("click", () => { if (isLive()) disconnectAll(); else openSocket(); });
+  $("disconnectAll2").addEventListener("click", () => { if (isLive()) disconnectAll(); else openSocket(); });
+
+  $("channel").focus();
+</script>

@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Captured chat exports & logs produced by the tools
+*.log
+twitch-*.txt
+twitch-*.json
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
